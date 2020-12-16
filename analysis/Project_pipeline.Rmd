@@ -1,0 +1,78 @@
+---
+title: "Data Analysis Project Pipeline"
+author: "Hao Zheng"
+date: "December 14, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(kableExtra)
+library(tidyverse)
+```
+```{r echo=F}
+# load the data
+my_gapminder <- read.csv("../Data/my_gapminder.csv")
+my_penguins <- read.csv("../Data/my_penguins.csv")
+```
+```{r}
+# load the code from the Code subfolder
+rf_cv_temp <- source("../Code/my_rf_cv.r")
+my_rf_cv <- rf_cv_temp$value
+```
+  
+```{r}
+# set up my ggplot
+options(dplyr.summarise.inform = FALSE)
+cv_error <- matrix(NA, nrow = 30 * 3, ncol = 2)
+cv_error[, 1] <- rep(c(2, 5, 10), each = 30)
+row <- 0
+cv_error <- matrix(NA, nrow = 30 * 3, ncol = 2)
+cv_error[, 1] <- rep(c(2, 5, 10), each = 30)
+row <- 0
+for(k in c(2, 5, 10)) {
+  for(i in 0:29) {
+    row <- row + 1
+    cv_error[row, 2] <- my_rf_cv(k)
+  }
+}
+my_df <- data.frame("mse" = cv_error[, 2], "k" = cv_error[, 1])
+# create the ggplot in boxplot
+ggbox <- my_df %>%
+  ggplot(aes(x = factor(k), y = mse)) +
+  geom_boxplot() +
+ labs(title = "MSE", x = "Folds number", y = "MSE")
+#ggbox
+ggsave(filename = "../Output/Figures/boxplot.pdf", ggbox, height = 5, width = 7)
+
+```
+
+```{r}
+mse_2 <- vector()
+mse_5 <- vector()
+mse_10 <- vector()
+for (i in 1:30) {
+  mse_5[i] <- my_rf_cv(5)
+  mse_2[i] <- my_rf_cv(2)
+  mse_10[i] <- my_rf_cv(10)
+}
+# combine them in correct order
+combine <- data.frame("Simulation #" = seq(1:30),
+                              "k = 2" = mse_2,
+                              "k = 5" = mse_5,
+                              "k = 10" = mse_10)
+# save the csv file
+write.csv(combine, "../output/Results/combine.csv")
+k_val <- c(2, 5, 10)
+all_mean <- c(mean(mse_2), mean(mse_5), mean(mse_10))
+all_sd <- c(sd(mse_2), sd(mse_5), sd(mse_10))
+mse_table <- data.frame("k vaalue" = k_val,
+                        "MSE" = all_mean,
+                        "Standard deviation" = all_sd)
+#save the table
+saveRDS(mse_table, "../Output/Results/table.RDS")
+```
+
+
+
+
